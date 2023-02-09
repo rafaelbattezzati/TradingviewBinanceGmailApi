@@ -59,6 +59,7 @@ def order(side, quantity, symbol, order_type):
 def webhook():
     print("Order method starts")
     data = json.loads(request.data)
+    #print("data:"+data)
 
     if data['passphase'] != config.WEBHOOK_PASSPHRASE:
         return {
@@ -66,7 +67,12 @@ def webhook():
             "message": "Invalid Passphrase"
         }
 
-    #side = request.data['side']
+    #TODO CORTAR PERP DO TICKER
+    #TODO IDENTIFICAR BUY OR SELL PELO OPEN E CLOSE
+    #TODO LOGICA DE CALCULAR PORCENTAGEM DE AMOUNT/ALAVACANGEM PARA DEFINIR QUANTIDADE
+
+    ticker = data['ticker']
+    print("ticker:"+ticker)
     #quantity = request.data['quantity']
     #ticker = request.data['ticker']
 
@@ -107,23 +113,6 @@ def main():
         try:
             # Call the Gmail API
             service = build('gmail', 'v1', credentials=creds)
-            results = service.users().labels().list(userId='me').execute()
-            labels = results.get('labels', [])
-
-            # if not labels:
-            #    print('No labels found.')
-            #    return
-            # print('Labels:')
-            # for label in labels:
-            #    print(label['name'])
-
-
-            #headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-            #json1 = '{                "passphase":"abcdefgh",                "time":"2023-02-09T00:25:00Z",                "exchange":"BINANCE",                "ticker":"DOGEUSDTPERP",                "time":"2023-02-09T00:24:00Z",                "open":0.0900261489017556,                "high":0.09004,                "low":0.08994,                "close":0.090005,                "volume":14158921            }'
-            #r = requests.post('http://127.0.0.1:5000/webhook', data=json1)
-            #print(f"Scheduler ASS333tatus: {r.status_code}")
-            #print(f"Scheduler Status2: {json_object2}")
-
             results = service.users().messages().list(userId='me', labelIds=['INBOX'], q="is:unread").execute()
             messages = results.get('messages', [])
             if not messages:
@@ -146,13 +135,12 @@ def main():
                                 markEmailAsRead(service, message)
                                 print("MESSAGE ID SET TO UNREAD:" + message['id'])
                                 r = requests.post('http://localhost:5000/webhook', data=split_message)
-                                print(f"VALENDO: {r.status_code}")
-                                print(f"VALENDO2: {split_message}")
+                                print(f"Status Code: {r.status_code}")
+                                print(f"JSON file: {split_message}")
         except HttpError as error:
             # TODO(developer) - Handle errors from gmail API.
             print(f'An error occurred: {error}')
-
-        time.sleep(60)
+        time.sleep(30)
 
 
 def markEmailAsRead(service, message):
