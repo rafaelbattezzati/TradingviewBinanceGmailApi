@@ -1,0 +1,4 @@
+flash
+gunicorn
+python-binance
+binance-futures-connector

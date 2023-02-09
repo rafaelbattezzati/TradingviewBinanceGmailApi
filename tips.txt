@@ -1,0 +1,4 @@
+//comandos para rodat FLASK
+
+set FLASK_APP=quickstart.py
+flask --debug run
