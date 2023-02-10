@@ -17,36 +17,34 @@ from binance.lib.utils import config_logging
 from binance.client import Client
 from binance.enums import *
 
-
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.modify',
           'https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/drive.file',
           'https://www.googleapis.com/auth/drive.metadata']
 
 app = Flask(__name__)
-#config_logging(logging, logging.DEBUG)
+# config_logging(logging, logging.DEBUG)
 client = Client(config.API_KEY, config.API_SECRET)
+
+
 def order(side, quantity, symbol, order_type):
     try:
         print(f"sending FUTURES order: {symbol} {side} {order_type} {quantity}")
-        #test_order = client.create_test_order(
+        # test_order = client.create_test_order(
         #    symbol='BTCUSDT',
         #    type='MARKET',
         #    side='BUY',
         #    quantity=0.001
-        #)
-        #logging.info(test_order)
+        # )
+        # logging.info(test_order)
 
-        #client.futures_change_margin_type(symbol=symbol, marginType='ISOLATED')
         client.futures_change_leverage(symbol=symbol, leverage=1)
+        now = datetime.datetime.now()
+        print("FIRST ORDER FUTURES:"+side)
+        print("Time First Order..." + now.strftime("%Y-%m-%d %H:%M:%S"))
+        order_futures = buy_sell(symbol=symbol,side=side,quantity=quantity)
+        print(order_futures)
 
-        order_futures = client.futures_create_order(
-            symbol=symbol,
-            type='MARKET',
-            side=side,
-            quantity=quantity
-        )
-        print(order)
     except Exception as e:
         logging.error(
             "Found error. status: {}, error message: {}".format(e)
@@ -55,37 +53,129 @@ def order(side, quantity, symbol, order_type):
         return False
     return order_futures
 
+def order2(side, quantity, symbol, order_type):
+    try:
+        print(f"sending FUTURES order: {symbol} {side} {order_type} {quantity}")
+        client.futures_change_leverage(symbol=symbol, leverage=12)
+        now = datetime.datetime.now()
+
+
+
+        print("ORDER FUTURES 1 "+side)
+        print("Time Futures 1..." + now.strftime("%Y-%m-%d %H:%M:%S"))
+        order_futures = buy_sell(symbol=symbol,side=side,quantity=quantity)
+        print(order_futures)
+
+        time.sleep(2)
+
+        #if side == 'BUY':
+        #    side = 'SELL'
+        #else:
+        #    side = 'BUY'
+
+        print("ORDER FUTURES 2:"+side)
+        print("Time Futures 2..." + now.strftime("%Y-%m-%d %H:%M:%S"))
+        order_futures = buy_sell(symbol=symbol,side=side,quantity=quantity)
+        print(order_futures)
+
+    except Exception as e:
+        logging.error(
+            "Found error. status: {}, error message: {}".format(e)
+        )
+        print("an exception occured - {}".format(e))
+        return False
+    return order_futures
+
+def buy_sell(symbol, side, quantity):
+    order_futures = client.futures_create_order(
+        symbol=symbol,
+        type='MARKET',
+        side=side,
+        quantity=quantity
+    )
+    return order_futures
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    print("Order method starts")
+    print("webhook method starts")
     data = json.loads(request.data)
-    #print("data:"+data)
-
     if data['passphase'] != config.WEBHOOK_PASSPHRASE:
         return {
             "code": "error",
             "message": "Invalid Passphrase"
         }
+    # TODO CORTAR PERP DO TICKER
+    # TODO IDENTIFICAR BUY OR SELL PELO OPEN E CLOSE
+    # TODO LOGICA DE CALCULAR PORCENTAGEM DE AMOUNT/ALAVACANGEM PARA DEFINIR QUANTIDADE
+    tickerItem = data['ticker'].split("PERP", 1)
+    ticker = str(tickerItem[0])
+    print("ticker:" + ticker)
+    side = 'SELL'
+    if data['open'] < data['close']:
+        side = 'BUY'
 
-    #TODO CORTAR PERP DO TICKER
-    #TODO IDENTIFICAR BUY OR SELL PELO OPEN E CLOSE
-    #TODO LOGICA DE CALCULAR PORCENTAGEM DE AMOUNT/ALAVACANGEM PARA DEFINIR QUANTIDADE
-
-    ticker = data['ticker']
-    print("ticker:"+ticker)
-    #quantity = request.data['quantity']
-    #ticker = request.data['ticker']
-
-    order_response = order('BUY', 100, 'DOGEUSDT', 'MARKET')
-    #order_response = order(side, 100, ticker, 'MARKET')
-    print(order_response)
+    print("side:" + side)
+    order_response = order(side, 100, ticker, 'MARKET')
     return {
         "code": "success",
-        "message": data
+        "message": order_response
     }
 
+@app.route('/webhook2', methods=['POST'])
+def webhook2():
+    print("webhook2 method starts")
+    data = json.loads(request.data)
+    if data['passphase'] != config.WEBHOOK_PASSPHRASE:
+        return {
+            "code": "error",
+            "message": "Invalid Passphrase"
+        }
+    # TODO CORTAR PERP DO TICKER
+    # TODO IDENTIFICAR BUY OR SELL PELO OPEN E CLOSE
+    # TODO LOGICA DE CALCULAR PORCENTAGEM DE AMOUNT/ALAVACANGEM PARA DEFINIR QUANTIDADE
+    tickerItem = data['ticker'].split("PERP", 1)
+    ticker = str(tickerItem[0])
+    print("ticker:" + ticker)
+    side = 'SELL'
+    if data['open'] < data['close']:
+        side = 'BUY'
+
+    print("side:" + side)
+    order_response = order2(side, 100, ticker, 'MARKET')
+    return {
+        "code": "success",
+        "message": order_response
+    }
+
+@app.route('/get', methods=['GET'])
+def get():
+    #order_response = order('BUY', 100, 'DOGEUSDT', 'MARKET')
+    try:
+        data = json.loads(request.data)
+        print("request.data")
+        print(request.data)
+        print("DATAAAA GET")
+        print(data)
+
+        response = client.futures_get_position_mode()
+        #response = client.get_order_book(symbol="AUDIOUSDT")
+        #response = client.get_open_order(symbol="AUDIOUSDT")
+        print("response ggg")
+        print(response)
+        print("response fim")
+    except Exception as e:
+        logging.error(
+            "Found error. status: {}, error message: {}".format(e)
+        )
+        print("an exception occured - {}".format(e))
+    return {
+        "code": "success",
+        "message": response
+    }
 
 def main():
+
+    firstTime = True
     while (True):
         now = datetime.datetime.now()
         print("Carregando TradingViewBinanceGmail..." + now.strftime("%Y-%m-%d %H:%M:%S"))
@@ -130,17 +220,22 @@ def main():
                             if subject_name.startswith('Alerta'):
                                 split_message = subject_name.split('Alerta:', 1)[1]
                                 print(split_message)
-                                json_object = json.loads(split_message)
-                                print(json_object["volume"])
                                 markEmailAsRead(service, message)
                                 print("MESSAGE ID SET TO UNREAD:" + message['id'])
-                                r = requests.post('http://localhost:5000/webhook', data=split_message)
+                                print("firstTime:"+str(firstTime))
+                                if firstTime == True:
+                                    r = requests.post('http://localhost:5000/webhook', data=split_message)
+                                    firstTime = False
+                                else:
+                                    r = requests.post('http://localhost:5000/webhook2', data=split_message)
                                 print(f"Status Code: {r.status_code}")
                                 print(f"JSON file: {split_message}")
         except HttpError as error:
             # TODO(developer) - Handle errors from gmail API.
             print(f'An error occurred: {error}')
-        time.sleep(30)
+
+        time.sleep(15)
+
 
 
 def markEmailAsRead(service, message):
